@@ -131,7 +131,7 @@ class AzureDatalakeFileSystem(AbstractFileSystem):
     @classmethod
     def _strip_protocol(cls, path):
         ops = infer_storage_options(path)
-        return ops["path"]
+        return ops["path"].lstrip('/')
 
     def do_connect(self):
         """Establish connection object."""
