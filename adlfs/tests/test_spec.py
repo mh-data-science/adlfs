@@ -1,15 +1,15 @@
+import datetime
 import os
 import tempfile
-import datetime
+
 import dask.dataframe as dd
-from fsspec.implementations.local import LocalFileSystem
 import numpy as np
 import pandas as pd
-from pandas.testing import assert_frame_equal
 import pytest
+from fsspec.implementations.local import LocalFileSystem
+from pandas.testing import assert_frame_equal
 
-from adlfs import AzureBlobFileSystem, AzureBlobFile
-
+from adlfs import AzureBlobFile, AzureBlobFileSystem
 
 URL = "http://127.0.0.1:10000"
 ACCOUNT_NAME = "devstoreaccount1"
@@ -70,7 +70,8 @@ def assert_blobs_equals(blobs, expected_blobs):
 
 def test_ls(storage):
     fs = AzureBlobFileSystem(
-        account_name=storage.account_name, connection_string=CONN_STR,
+        account_name=storage.account_name,
+        connection_string=CONN_STR,
     )
 
     ## these are containers
@@ -663,7 +664,8 @@ def test_rm_recursive(storage):
 
 def test_mkdir(storage):
     fs = AzureBlobFileSystem(
-        account_name=storage.account_name, connection_string=CONN_STR,
+        account_name=storage.account_name,
+        connection_string=CONN_STR,
     )
 
     # Verify mkdir will create a new container when create_parents is True
@@ -698,7 +700,8 @@ def test_mkdir(storage):
 
 def test_makedir(storage):
     fs = AzureBlobFileSystem(
-        account_name=storage.account_name, connection_string=CONN_STR,
+        account_name=storage.account_name,
+        connection_string=CONN_STR,
     )
 
     # Verify makedir will create a new container when create_parents is True
@@ -719,7 +722,8 @@ def test_makedir(storage):
 
 def test_makedir_rmdir(storage, caplog):
     fs = AzureBlobFileSystem(
-        account_name=storage.account_name, connection_string=CONN_STR,
+        account_name=storage.account_name,
+        connection_string=CONN_STR,
     )
 
     fs.makedir("new-container")
@@ -1157,17 +1161,57 @@ def test_put_file(storage):
     fs.rm("putdir", recursive=True)
 
 
-@pytest.mark.skip
 def test_isdir(storage):
     fs = AzureBlobFileSystem(
         account_name=storage.account_name, connection_string=CONN_STR
     )
-    BUCKET = "/name/of/the/bucket"
-    BASE_PATH = BUCKET + "/" + "012345"
-    # EMPTY_DIR = BASE_PATH + "/empty_dir"
+    fs.touch("data/root/a/file.txt")
+    assert fs.isdir("data") is True
+    assert fs.isdir("data/top_file.txt") is False
+    assert fs.isdir("data/root") is True
+    assert fs.isdir("data/root/") is True
+    assert fs.isdir("data/root/rfile.txt") is False
+    assert fs.isdir("data/root/a") is True
+    assert fs.isdir("data/root/a/") is True
 
-    fs.makedirs(BASE_PATH)
-    assert fs.isdir(BASE_PATH) is True
+
+def test_isfile(storage):
+    fs = AzureBlobFileSystem(
+        account_name=storage.account_name, connection_string=CONN_STR
+    )
+
+    assert fs.isfile("data") is False
+    assert fs.isfile("data/top_file.txt") is True
+    assert fs.isfile("data/root") is False
+    assert fs.isfile("data/root/") is False
+    assert fs.isfile("data/root/rfile.txt") is True
+    fs.touch("data/root/null_file.txt")
+    assert fs.isfile("data/root/null_file.txt") is True
+
+
+def test_isdir(storage):
+    fs = AzureBlobFileSystem(
+        account_name=storage.account_name, connection_string=CONN_STR
+    )
+    fs.touch("data/root/a/file.txt")
+    assert fs.isdir("data") is True
+    assert fs.isdir("data/top_file.txt") is False
+    assert fs.isdir("data/root") is True
+    assert fs.isdir("data/root/") is True
+    assert fs.isdir("data/root/rfile.txt") is False
+    assert fs.isdir("data/root/a") is True
+    assert fs.isdir("data/root/a/") is True
+
+
+def test_isdir_cache(storage):
+    fs = AzureBlobFileSystem(
+        account_name=storage.account_name, connection_string=CONN_STR
+    )
+    print("checking isdir cache")
+    files = fs.ls("data/root")  # noqa: F841
+    assert fs.isdir("data/root/a") is True
+    assert fs.isdir("data/root/a/") is True
+    assert fs.isdir("data/root/rfile.txt") is False
 
 
 def test_cat(storage):
@@ -1218,6 +1262,9 @@ def test_cat_file_missing(storage):
         fs.cat_file("does/not/exist")
 
 
+@pytest.mark.skip(
+    reason="Bug in Azurite Storage Emulator v3.15.0 gives 403 status_code"
+)
 def test_url(storage):
     fs = AzureBlobFileSystem(
         account_name=storage.account_name, connection_string=CONN_STR, account_key=KEY

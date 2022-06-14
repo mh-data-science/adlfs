@@ -40,6 +40,10 @@ storage_options={'account_name': ACCOUNT_NAME, 'account_key': ACCOUNT_KEY}
 ddf = dd.read_csv('abfs://{CONTAINER}/{FOLDER}/*.csv', storage_options=storage_options)
 ddf = dd.read_parquet('az://{CONTAINER}/folder.parquet', storage_options=storage_options)
 
+Accepted protocol / uri formats include:
+'PROTOCOL://container/path-part/file'
+'PROTOCOL://container@account.dfs.core.windows.net/path-part/file'
+
 or optionally, if AZURE_STORAGE_ACCOUNT_NAME and an AZURE_STORAGE_<CREDENTIAL> is 
 set as an environmental variable, then storage_options will be read from the environmental
 variables
@@ -72,6 +76,7 @@ Operations against the Gen2 Datalake are implemented by leveraging [Azure Blob S
         sas_token
         connection_string
         Azure ServicePrincipal credentials (which requires tenant_id, client_id, client_secret)
+        anon
         location_mode:  valid value are "primary" or "secondary" and apply to RA-GRS accounts
 
     The following enviornmental variables can also be set and picked up for authentication:
@@ -82,6 +87,13 @@ Operations against the Gen2 Datalake are implemented by leveraging [Azure Blob S
         "AZURE_STORAGE_CLIENT_SECRET"
         "AZURE_STORAGE_CLIENT_ID"
         "AZURE_STORAGE_TENANT_ID"
+
+    The default value for anon (anonymous) is True.  If no explicit credentials are set, the
+    AzureBlobFileSystem will assume the account_name points to a public container, and attempt to use an anonymous login.
+
+    If anon (anonymous) is False, AzureBlobFileSystem will attempt to authenticate using Azure's 
+    DefaultAzureCredential() library.  Specifics of the types of authentication permitted can be
+    found [here](https://docs.microsoft.com/en-us/python/api/azure-identity/azure.identity.defaultazurecredential?view=azure-pythonhttps://docs.microsoft.com/en-us/python/api/azure-identity/azure.identity.defaultazurecredential?view=azure-python)
 
 
 The AzureBlobFileSystem accepts [all of the Async BlobServiceClient arguments](https://docs.microsoft.com/en-us/azure/storage/blobs/storage-quickstart-blobs-python).
