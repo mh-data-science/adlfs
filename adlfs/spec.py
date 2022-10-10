@@ -110,13 +110,13 @@ class AzureDatalakeFileSystem(AbstractFileSystem):
 
     protocol = "adl"
 
-    def __init__(self, tenant_id=None, client_id=None, client_secret=None, store_name=None, account_name=None, token=None):
+    def __init__(self, tenant_id=None, client_id=None, client_secret=None, store_name=None, account_name=None, token=None, credential=None):
         super().__init__()
         self.tenant_id = tenant_id
         self.client_id = client_id
         self.client_secret = client_secret
         self.store_name = store_name or account_name
-        self.token = token
+        self.token = token or credential
         self.do_connect()
 
     @staticmethod
