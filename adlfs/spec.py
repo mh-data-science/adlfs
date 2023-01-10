@@ -110,7 +110,16 @@ class AzureDatalakeFileSystem(AbstractFileSystem):
 
     protocol = "adl"
 
-    def __init__(self, tenant_id=None, client_id=None, client_secret=None, store_name=None, account_name=None, token=None, credential=None):
+    def __init__(
+        self,
+        tenant_id=None,
+        client_id=None,
+        client_secret=None,
+        store_name=None,
+        account_name=None,
+        token=None,
+        credential=None,
+    ):
         super().__init__()
         self.tenant_id = tenant_id
         self.client_id = client_id
@@ -131,13 +140,13 @@ class AzureDatalakeFileSystem(AbstractFileSystem):
     @classmethod
     def _strip_protocol(cls, path):
         ops = infer_storage_options(path)
-        return ops["path"].lstrip('/')
+        return ops["path"].lstrip("/")
 
     def do_connect(self):
         """Establish connection object."""
         if self.token:
             token = self.token
-        elif (self.tenant_id and self.client_id and self.client_secret):
+        elif self.tenant_id and self.client_id and self.client_secret:
             token = lib.auth(
                 tenant_id=self.tenant_id,
                 client_id=self.client_id,
@@ -677,8 +686,25 @@ class AzureBlobFileSystem(AsyncFileSystem):
         else:
             raise FileNotFoundError
 
+    def fsagnosticglob(fs, path, prefix=""):
+        if "//" in path:
+            path = path.split("//")[-1]
+        paths = [prefix]
+        for part in path.strip("/").split("/"):
+            newpaths = []
+            for _prefix in paths:
+                checkpath = os.path.join(_prefix, part)
+                if "*" in part:
+                    potentialpaths = fs.ls(_prefix) if fs.exists(_prefix) else []
+                    newpaths.extend(potentialpaths)
+                else:
+                    newpaths.append(checkpath)
+            paths = newpaths
+        logger.debug(f"{paths=}")
+        return paths
+
     def glob(self, path, **kwargs):
-        return sync(self.loop, self._glob, path)
+        return self.fsagnosticglob(path)
 
     async def _glob(self, path, **kwargs):
         """
