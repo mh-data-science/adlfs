@@ -702,8 +702,8 @@ class AzureBlobFileSystem(AsyncFileSystem):
                 if "*" in part:
                     # get all potential paths 
                     potentialpaths = fs.ls(_prefix) if fs.exists(_prefix) else []
-                    # filter using the path as regex, assuming * in the glob path means the same as .* in a regex
-                    correctpaths = [p for p in potentialpaths if re.fullmatch(part.replace("*", ".*"), p)]
+                    # filter this part of the path, assuming * in the glob path means the same as .* in a regex
+                    correctpaths = [p for p in potentialpaths if re.fullmatch(part.replace("*", ".*"), p.split("/")[-1])]
                     newpaths.extend(correctpaths)
                 else:
                     # just use the path 
