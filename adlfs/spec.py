@@ -687,24 +687,38 @@ class AzureBlobFileSystem(AsyncFileSystem):
             raise FileNotFoundError
 
     def fsagnosticglob(fs, path, prefix=""):
+        import re
+        # filter out protocols if present
         if "//" in path:
             path = path.split("//")[-1]
+        # paths is the current list of prefixes to check
         paths = [prefix]
+        # move from left to right over each part of the path
+        # NOTE: this implies that * covering multiple parts is not supported
+        # e.g. path="path/to/something=*/file" doesn't match "path/to/something=a/another=b/file"
         for part in path.strip("/").split("/"):
             newpaths = []
             for _prefix in paths:
-                checkpath = os.path.join(_prefix, part)
                 if "*" in part:
+                    # get all potential paths 
                     potentialpaths = fs.ls(_prefix) if fs.exists(_prefix) else []
-                    newpaths.extend(potentialpaths)
+                    # filter using the path as regex, assuming * in the glob path means the same as .* in a regex
+                    correctpaths = [p for p in potentialpaths if re.fullmatch(part.replace("*", ".*"), p)]
+                    newpaths.extend(correctpaths)
                 else:
+                    # just use the path 
+                    checkpath = os.path.join(_prefix, part)
                     newpaths.append(checkpath)
             paths = newpaths
         logger.debug(f"{paths=}")
         return paths
 
     def glob(self, path, **kwargs):
-        return self.fsagnosticglob(path)
+        if "**" in path:
+            # ** is not supported in fsagnosticglob for now
+            return sync(self.loop, self._glob, path)
+        else:
+            return self.fsagnosticglob(path)
 
     async def _glob(self, path, **kwargs):
         """
